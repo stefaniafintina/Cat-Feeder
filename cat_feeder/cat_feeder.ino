@@ -91,9 +91,9 @@ void logEvent(const String& msg) {
 void feed(const String& source) {
   if (millis() - lastFeedMillis < feedCooldown) return;
 
-  servo.detach(); // 🧠 opțional, eliberează canalul PWM
+  servo.detach(); 
   delay(50);
-  servo.attach(SERVO_PIN, 500, 2400); // 🔁 reinitializează PWM
+  servo.attach(SERVO_PIN, 500, 2400); 
   servo.write(180);
   delay(500);
   servo.write(0);
@@ -150,9 +150,6 @@ void setup() {
   if (!rtc.begin()) Serial.println("Eroare RTC!");
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) Serial.println("Eroare OLED!");
   if (!SD.begin(SD_CS)) Serial.println("Eroare card SD!");
-  // else {
-  //   printSDLog(); // ✅ Afișăm log-ul în Serial Monitor
-  // }
 
   attachInterrupt(digitalPinToInterrupt(BUTTON_FEED), onFeedInterrupt, FALLING);
 
