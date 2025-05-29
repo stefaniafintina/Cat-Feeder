@@ -241,10 +241,11 @@ void loop() {
   DateTime now = rtc.now();
   displayTime(now);
 
-  if ((now.hour() == 8 || now.hour() == 13 || now.hour() == 18) &&
-      now.minute() == 0 && now.second() == 0) {
+  static int lastFeedHour = -1;
+  if ((now.hour() == 8 || now.hour() == 14 || now.hour() == 18) &&
+      now.minute() == 0 && now.hour() != lastFeedHour) {
     feed("automata");
-    delay(1000);
+    lastFeedHour = now.hour();
   }
 
   noInterrupts();
