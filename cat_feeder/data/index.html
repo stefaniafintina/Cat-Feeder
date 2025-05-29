@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Hrănitor Pisici</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin-top: 40px;
+    }
+    .led {
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      display: inline-block;
+      margin: 10px;
+      border: 1px solid #333;
+    }
+    .verde { background-color: green; }
+    .galben { background-color: yellow; }
+    .rosu { background-color: red; }
+    button {
+      font-size: 1.2em;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>Stare Hrănitor</h2>
+  <p id="msg">%MSG%</p>
+  <div class="led %LED%"></div>
+  <form action="/feed" method="POST">
+    <br><br>
+    <button type="submit">Hrănire manuală</button>
+  </form>
+</body>
+</html>
