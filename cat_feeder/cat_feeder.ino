@@ -4,6 +4,7 @@
 #include <Adafruit_SSD1306.h>
 #include <SPI.h>
 #include <SD.h>
+#include "driver/gpio.h"
 
 // OLED
 #define SCREEN_WIDTH 128
@@ -22,7 +23,7 @@ Servo servo;
 // Butoane
 #define BUTTON_FEED 4
 #define BUTTON_RESET 33
-#define BUTTON_LOG 34 
+#define BUTTON_LOG 34
 
 // LED-uri
 #define LED_GREEN 12
@@ -44,7 +45,6 @@ unsigned long resetMsgMillis = 0;
 unsigned long lastVibrationMsgMillis = 0;
 const unsigned long vibrationCooldown = 60000;
 unsigned long vibrationIgnoreUntil = 0;
-
 
 void IRAM_ATTR onFeedInterrupt() {
   feedInterrupt = true;
@@ -88,7 +88,7 @@ void displayTime(DateTime now) {
     String title = "Chloe's Feeder";
     display.getTextBounds(title, 0, 0, &x1, &y1, &w, &h);
     int x_title = (SCREEN_WIDTH - w) / 2;
-    display.setCursor(x_title, 24);  
+    display.setCursor(x_title, 24);
     display.println(title);
   }
 
@@ -109,7 +109,6 @@ void logSimple(const String& text) {
     return;
   }
 
-  // Verif daca scrie bine pe SD
   File fRead = SD.open("/log.txt");
   String lastLine = "";
   if (fRead) {
@@ -145,7 +144,6 @@ void printSDLog() {
   Serial.println("=== SFÂRȘIT LOG ===");
 }
 
-// 🔽 FUNCȚIE NOUĂ: afișează ultimul log
 void showLastLog() {
   File f = SD.open("/log.txt");
   if (!f) {
@@ -175,7 +173,7 @@ void showLastLog() {
   display.println(lastLine);
   display.display();
 
-  delay(3000); // Afișează 3 secunde
+  delay(3000);
 }
 
 void feed(const String& source) {
@@ -188,9 +186,9 @@ void feed(const String& source) {
   delay(500);
   servo.write(0);
 
-  tone(BUZZER_PIN, 1000);
+  GPIO.out_w1ts = (1 << BUZZER_PIN);
   delay(300);
-  noTone(BUZZER_PIN);
+  GPIO.out_w1tc = (1 << BUZZER_PIN);
 
   feedCount++;
   updateLEDs();
@@ -204,7 +202,6 @@ void resetFeed() {
   feedCount = 0;
   updateLEDs();
   logSimple("Reset contor");
-
   showResetMsg = true;
   resetMsgMillis = millis();
 }
@@ -212,14 +209,18 @@ void resetFeed() {
 void setup() {
   Serial.begin(115200);
 
-  pinMode(BUTTON_FEED, INPUT_PULLUP);
-  pinMode(BUTTON_RESET, INPUT_PULLUP);
-  pinMode(BUTTON_LOG, INPUT); // GPIO34 NU are PULLUP intern
+  gpio_set_direction((gpio_num_t)BUTTON_FEED, GPIO_MODE_INPUT);
+  gpio_set_pull_mode((gpio_num_t)BUTTON_FEED, GPIO_PULLUP_ONLY);
+  gpio_set_direction((gpio_num_t)BUTTON_RESET, GPIO_MODE_INPUT);
+  gpio_set_pull_mode((gpio_num_t)BUTTON_RESET, GPIO_PULLUP_ONLY);
+  gpio_set_direction((gpio_num_t)BUTTON_LOG, GPIO_MODE_INPUT);
+
   pinMode(LED_GREEN, OUTPUT);
   pinMode(LED_YELLOW, OUTPUT);
   pinMode(LED_RED, OUTPUT);
-  pinMode(BUZZER_PIN, OUTPUT);
-  pinMode(VIBRATION_PIN, INPUT);
+
+  gpio_set_direction((gpio_num_t)BUZZER_PIN, GPIO_MODE_OUTPUT);
+  gpio_set_direction((gpio_num_t)VIBRATION_PIN, GPIO_MODE_INPUT);
 
   if (!rtc.begin()) Serial.println("Eroare RTC!");
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) Serial.println("Eroare OLED!");
@@ -240,14 +241,12 @@ void loop() {
   DateTime now = rtc.now();
   displayTime(now);
 
-  // Hrănire automată
   if ((now.hour() == 8 || now.hour() == 13 || now.hour() == 18) &&
       now.minute() == 0 && now.second() == 0) {
     feed("automata");
     delay(1000);
   }
 
-  // Hrănire manuală
   noInterrupts();
   bool shouldFeed = feedInterrupt;
   feedInterrupt = false;
@@ -257,20 +256,17 @@ void loop() {
     feed("manuala");
   }
 
-  // Reset contor
-  if (digitalRead(BUTTON_RESET) == LOW) {
+  if (!gpio_get_level((gpio_num_t)BUTTON_RESET)) {
     resetFeed();
     delay(300);
   }
 
-  // Afișare ultim log
-  if (digitalRead(BUTTON_LOG) == HIGH) { // Butonul legat la 3.3V, rezistență pull-down externă!
+  if (gpio_get_level((gpio_num_t)BUTTON_LOG)) {
     showLastLog();
     delay(300);
   }
 
-  // Detectare vibrație
-  if (millis() > vibrationIgnoreUntil && digitalRead(VIBRATION_PIN) == LOW) {
+  if (millis() > vibrationIgnoreUntil && !gpio_get_level((gpio_num_t)VIBRATION_PIN)) {
     if (millis() - lastVibrationMsgMillis > vibrationCooldown) {
       DateTime now = rtc.now();
       logSimple("Pisica a mancat");
